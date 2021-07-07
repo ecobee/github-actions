@@ -29,8 +29,8 @@ runs:
       shell: bash
     - name: Build and Push Container
       run: |-
-        docker build -t gcr.io/${{ input.project }}/${{ input.service }}:${{ env.NOW }}-${{ github.sha }} ./
-        docker tag gcr.io/${{ input.project }}/${{ input.service }}:${{ env.NOW }}-${{ github.sha }} gcr.io/${{ input.project }}/${{ input.service }}:latest
-        docker push gcr.io/${{ input.project }}/${{ input.service }}:${{ env.NOW }}-${{ github.sha }}
-        docker push gcr.io/${{ input.project }}/${{ input.service }}:latest
+        docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }} ./
+        docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
+        docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }}
+        docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
       shell: bash
