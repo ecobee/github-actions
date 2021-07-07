@@ -18,7 +18,7 @@ runs:
       run: gcloud auth configure-docker gcr.io
       shell: bash
     - name: Get current timestamp
-      run: echo "NOW=$(date +'+%Y%m%d-%H%M')" >> $GITHUB_ENV
+      run: echo "NOW=$(date '+%Y%m%d-%H%M')" >> $GITHUB_ENV
       shell: bash
     - name: Output timestamp
       id: output-timestamp
