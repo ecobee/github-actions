@@ -1,0 +1,32 @@
+name: 'GO: Build and push docker'
+description: 'Builds golang image, builds docker, pushes to gcr.io'
+inputs:
+  project:
+    description: 'GCP project'
+    required: true
+  service:
+    description: 'Service to build/push'
+    required: true
+outputs:
+  random-number:
+    description: "Random number"
+    value: ${{ steps.random-number-generator.outputs.random-id }}
+runs:
+  using: "composite"
+  steps:
+    - name: Authorize Docker push
+      run: gcloud auth configure-docker
+      shell: bash
+    - name: Get current timestamp
+      run: echo "NOW::$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+      shell: bash
+    - name: Build app
+      run: go build -v ./...
+      shell: bash
+    - name: Build and Push Container
+      run: |-
+        docker build -t gcr.io/${{ input.project }}/${{ input.service }}:${{ env.NOW }}-${{ github.sha }} ./
+        docker tag gcr.io/${{ input.project }}/${{ input.service }}:${{ env.NOW }}-${{ github.sha }} gcr.io/${{ input.project }}/${{ input.service }}:latest
+        docker push gcr.io/${{ input.project }}/${{ input.service }}:${{ env.NOW }}-${{ github.sha }}
+        docker push gcr.io/${{ input.project }}/${{ input.service }}:latest
+      shell: bash
