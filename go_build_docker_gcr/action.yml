@@ -8,9 +8,9 @@ inputs:
     description: 'Service to build/push'
     required: true
 outputs:
-  random-number:
-    description: "Random number"
-    value: ${{ steps.random-number-generator.outputs.random-id }}
+  timestamp:
+    description: "Timestamp for eventual deploy"
+    value: ${{ steps.output-timestamp.outputs.timestamp }}
 runs:
   using: "composite"
   steps:
@@ -19,6 +19,10 @@ runs:
       shell: bash
     - name: Get current timestamp
       run: echo "NOW::$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+      shell: bash
+    - name: Output timestamp
+      id: output-timestamp
+      run: echo "::set-output name=timestamp::$(echo $NOW)"
       shell: bash
     - name: Build app
       run: go build -v ./...
