@@ -16,6 +16,10 @@ This requires that you have previously run the `google-github-actions/setup-gclo
       service: ''
 ```
 
+## Outputs
+
+-   `timestamp` - action will output a timestamp generated when tagging/pushing the docker image
+
 ## Future options
 
 Things we could do in the future include, but are not limited to:
