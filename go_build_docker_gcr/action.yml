@@ -15,10 +15,10 @@ runs:
   using: "composite"
   steps:
     - name: Authorize Docker push
-      run: gcloud auth configure-docker
+      run: gcloud auth configure-docker gcr.io
       shell: bash
     - name: Get current timestamp
-      run: echo "NOW=$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+      run: echo "NOW=$(date +'+%Y%m%d-%H%M')" >> $GITHUB_ENV
       shell: bash
     - name: Output timestamp
       id: output-timestamp
