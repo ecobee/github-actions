@@ -27,6 +27,9 @@ runs:
     - name: Build app # assumes makefile with this target to make a binary
       run: make artifact-local
       shell: bash
+    - name: set
+      run: set
+      shell: bash
     - name: Build and Push Container
       run: |-
         docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }} ./
