@@ -9,13 +9,13 @@ inputs:
     required: true
 outputs:
   timestamp:
-    description: "Timestamp for eventual deploy"
+    description: 'Timestamp for eventual deploy'
     value: ${{ steps.output-timestamp.outputs.timestamp }}
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Authorize Docker push
-      run: gcloud auth configure-docker gcr.io
+      run: gcloud auth configure-docker --quiet gcr.io
       shell: bash
     - name: Get current timestamp
       run: echo "NOW=$(date '+%Y%m%d-%H%M')" >> $GITHUB_ENV
@@ -25,7 +25,7 @@ runs:
       run: echo "::set-output name=timestamp::$(echo $NOW)"
       shell: bash
     - name: Build app
-      run: go build -v ./...
+      run: go build -v ./... -o ./${{ inputs.service }}
       shell: bash
     - name: Build and Push Container
       run: |-
