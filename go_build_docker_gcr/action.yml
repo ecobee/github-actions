@@ -25,7 +25,7 @@ runs:
       run: echo "::set-output name=timestamp::$(echo $NOW)"
       shell: bash
     - name: Build app
-      run: go build -v ./... -o ./${{ inputs.service }}
+      run: CGOENABLED=0 go build -a -ldflags '-s' -o ${{ inputs.service }} ./...
       shell: bash
     - name: Sleeeeep
       run: sleep 99999
