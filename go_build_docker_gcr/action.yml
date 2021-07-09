@@ -35,8 +35,8 @@ runs:
       shell: bash
     - name: Build and Push Container
       run: |-
-        echo docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }} ./
-        echo docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
-        echo docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }}
-        echo docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
+        docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }} ./
+        docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
+        docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }}
+        docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
       shell: bash
