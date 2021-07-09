@@ -8,35 +8,35 @@ inputs:
     description: 'Service to build/push'
     required: true
 outputs:
-  timestamp:
-    description: 'Timestamp for eventual deploy'
-    value: ${{ steps.output-timestamp.outputs.timestamp }}
+  docker-tag:
+    description: 'Docker-tag for eventual deploy'
+    value: ${{ steps.output-docker-tag.outputs.docker-tag }}
 runs:
   using: 'composite'
   steps:
-    # - name: Authorize Docker push
-    #   run: gcloud auth configure-docker --quiet gcr.io
-    #   shell: bash
+    - name: Authorize Docker push
+      run: gcloud auth configure-docker --quiet gcr.io
+      shell: bash
     - name: Get current timestamp
       run: echo "NOW=$(date '+%Y%m%d-%H%M')" >> $GITHUB_ENV
       shell: bash
     - name: Set env
       run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
       shell: bash
-    - name: Output timestamp
-      id: output-timestamp
-      run: echo "::set-output name=timestamp::$(echo $NOW)"
+    - name: Output docker tag
+      id: output-docker-tag
+      run: echo "::set-output name=docker-tag::$(echo $NOW-$GITHUB_SHA_SHORT)"
       shell: bash
-    # - name: Build app # assumes makefile with this target to make a binary
-    #   run: make artifact-local
-    #   shell: bash
+    - name: Build app # assumes makefile with this target to make a binary
+      run: make artifact-local
+      shell: bash
     - name: set
       run: set
       shell: bash
     - name: Build and Push Container
       run: |-
-        echo docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }} ./
-        echo docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
-        echo docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ github.sha }}
+        echo docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }} ./
+        echo docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
+        echo docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }}
         echo docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
       shell: bash
