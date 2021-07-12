@@ -14,7 +14,7 @@ See individual action directory for details on usage and examples.
 
 - [Go Build artifact](../go_build_artifact) - builds golang binary and outputs build tag
 - [Go Test and Lint](../go_test_and_lint) - runs golang tests, and lints with golangci-lint
-- [Push Docker GCR](../push_docker_gcr) - creates docker file from expected artifact, using supplied build tag
+- [Push Docker GCR](../push_docker_gcr) - creates docker file from repo's Dockerfile, pushed using supplied build tag
 
 <!-- ## Changelog
 
