@@ -1,5 +1,5 @@
-name: 'GCP: Creaet and push docker'
-description: 'Creates docker, pushes to gcr.io'
+name: 'GCP: Create and push docker'
+description: 'Creates docker image, pushes to gcr.io'
 inputs:
   build-tag:
     description: 'Tag to use for dockerization'
