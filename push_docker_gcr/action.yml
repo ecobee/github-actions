@@ -1,0 +1,25 @@
+name: 'GCP: Creaet and push docker'
+description: 'Creates docker, pushes to gcr.io'
+inputs:
+  build-tag:
+    description: 'Tag to use for dockerization'
+    required: true
+  project:
+    description: 'GCP project'
+    required: true
+  service:
+    description: 'Service to push'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Authorize Docker push
+      run: gcloud auth configure-docker --quiet gcr.io
+      shell: bash
+    - name: Create and Push Container
+      run: |-
+        docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ inputs.build-tag }} ./
+        docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ inputs.build-tag }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
+        docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ inputs.build-tag }}
+        docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
+      shell: bash

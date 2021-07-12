@@ -1,0 +1,36 @@
+name: 'GO: Build and push docker'
+description: 'Builds golang image, builds docker, pushes to gcr.io'
+inputs:
+  build-command:
+    description: 'Command to build your service (i.e. make build)'
+    required: true
+    default: 'make artifact-local'
+  project:
+    description: 'GCP project'
+    required: true
+  service:
+    description: 'Service to build'
+    required: true
+outputs:
+  build-tag:
+    description: 'build-tag for eventual deploy'
+    value: ${{ steps.output-build-tag.outputs.build-tag }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Get current timestamp
+      run: echo "NOW=$(date '+%Y%m%d-%H%M')" >> $GITHUB_ENV
+      shell: bash
+    - name: Set env
+      run: echo "GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-6)" >> $GITHUB_ENV
+      shell: bash
+    - name: Build app # assumes makefile with this target to make a binary
+      run: ${{ inputs.build-command }}
+      shell: bash
+    - name: Copy artifact with build tag appended
+      run: cp ${{ service }} ${{ service }}.${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }}
+      shell: bash
+    - name: Output docker tag
+      id: output-build-tag
+      run: echo "::set-output name=build-tag::$(echo $NOW-$GITHUB_SHA_SHORT)"
+      shell: bash
