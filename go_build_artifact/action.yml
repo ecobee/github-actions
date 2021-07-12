@@ -3,7 +3,7 @@ description: 'Builds golang image, builds docker, pushes to gcr.io'
 inputs:
   build-command:
     description: 'Command to build your service (i.e. make build)'
-    required: true
+    required: false
     default: 'make artifact-local'
   project:
     description: 'GCP project'
