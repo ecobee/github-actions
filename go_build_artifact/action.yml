@@ -28,7 +28,7 @@ runs:
       run: ${{ inputs.build-command }}
       shell: bash
     - name: Copy artifact with build tag appended
-      run: cp ${{ service }} ${{ service }}.${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }}
+      run: cp ${{ inputs.service }} ${{ inputs.service }}.${{ env.NOW }}-${{ env.GITHUB_SHA_SHORT }}
       shell: bash
     - name: Output docker tag
       id: output-build-tag
