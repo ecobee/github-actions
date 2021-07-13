@@ -1,0 +1,23 @@
+version: 2
+updates:
+
+  # Maintain dependencies for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+      timezone: "America/Toronto"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+    labels:
+      - "security"
+      - "dependencies"
+      - "github actions"
+    commit-message:
+      prefix: "github actions"
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "/"
