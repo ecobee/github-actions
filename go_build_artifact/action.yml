@@ -1,13 +1,10 @@
-name: 'GO: Build and push docker'
-description: 'Builds golang image, builds docker, pushes to gcr.io'
+name: 'GO: Build artifact'
+description: 'Builds golang image'
 inputs:
   build-command:
     description: 'Command to build your service (i.e. make build)'
     required: false
     default: 'make artifact-local'
-  project:
-    description: 'GCP project'
-    required: true
   service:
     description: 'Service to build'
     required: true
