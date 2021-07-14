@@ -19,6 +19,7 @@ runs:
     - name: Create and Push Container
       run: |-
         pwd
+        ls -la
         docker build -t gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ inputs.build-tag }} ./
         #docker tag gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ inputs.build-tag }} gcr.io/${{ inputs.project }}/${{ inputs.service }}:latest
         #docker push gcr.io/${{ inputs.project }}/${{ inputs.service }}:${{ inputs.build-tag }}
