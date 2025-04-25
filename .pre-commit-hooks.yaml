@@ -1,12 +1,13 @@
-# We copied the "remove-crlf" hook from [github.com/Lucas-C/pre-commit-hooks].
-# We copied the version 1.5.5. I (@arnaud-at-ecobee) inspected the code of the
-# remove-crlf.py script and it does not present any threats (just converting
-# CRLF to LF).
 -   id: remove-crlf
+    # This hook has been copied mostly as-is from 'Lucas-C/pre-commit-hooks'.
+    # mainly to maintain a copy of it in our controlled repo. The copied
+    # `remove_crlf.py` script does not present any threats.
     name: remove CRLF end-lines
     description: "Replace CRLF end-lines by LF ones before committing"
     entry: remove_crlf
     language: python
     types: [text]
-    stages: [pre-commit, pre-push, pre-merge-commit]
-    minimum_pre_commit_version: "3.2.0"
+    # Commenting out `stages` and `minimum_pre_commit_version` to allow
+    # the hook to run on older version of pre-commit. Seems to work.
+    # stages: [pre-commit, pre-push, pre-merge-commit]
+    # minimum_pre_commit_version: "3.2.0"
