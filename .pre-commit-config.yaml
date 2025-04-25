@@ -1,0 +1,21 @@
+# See http://pre-commit.com for more information
+# See http://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ".*.patch$"
+      - id: check-json
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+        exclude: ".*.patch$"
+
+  - repo: local
+    hooks:
+    - id: remove-crlf
+      name: CRLF end-lines remover
+      description: "Replace CRLF end-lines by LF ones before committing"
+      entry: pre_commit_hooks/remove_crlf.py
+      language: python
+      types: [text]
