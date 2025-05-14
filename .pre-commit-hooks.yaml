@@ -11,3 +11,21 @@
     # the hook to run on older version of pre-commit. Seems to work.
     # stages: [pre-commit, pre-push, pre-merge-commit]
     # minimum_pre_commit_version: "3.2.0"
+
+-   id: bazel-buildifier
+    # This hook was first inspired by https://github.com/brymck/pre-commit-buildifier/
+    # but we decided to ditch the auto-installation and ship an hard-coded binary
+    # instead.
+    name: bazel buildifier
+    entry: pre_commit_hooks/run-buildifier.sh
+    language: script
+    files: |
+      (?x)^(
+        BUILD|
+        .*/BUILD|
+        WORKSPACE|
+        .*\.(bzl|sky|star)|
+        (BUILD|WORKSPACE)\..*\.(bazel|oss)
+      )$
+    description: Runs Buildifier on Bazel build and workspace files.
+    #minimum_pre_commit_version: '1'
