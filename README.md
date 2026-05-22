@@ -44,6 +44,14 @@ For maintainers releasing new versions:
    - Validate the new version is greater than the current version
    - Create and push both the version tag (`v1.2.3`) and major tag (`v1`)
 
+> **⚠️ Important:** The release script only validates version format and ordering. **You are responsible for:**
+> - Reviewing the changes since the last release
+> - Determining if the version bump is appropriate (major/minor/patch)
+> - Ensuring breaking changes are properly documented
+> - Verifying all actions work as expected
+>
+> The script is a safeguard against simple mistakes, not a substitute for careful release management.
+
 **Manual alternative:**
    ```bash
    git tag v1.0.0
