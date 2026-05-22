@@ -53,8 +53,8 @@ version_gt() {
 # Validate semver format
 validate_semver() {
   local version=$1
-  if [[ ! $version =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    error "Invalid version format: $version (expected: v1.2.3 or 1.2.3)"
+  if [[ ! $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    error "Invalid version format: $version (expected: v1.2.3)"
   fi
 }
 
@@ -63,11 +63,6 @@ main() {
   local current_branch=$(git branch --show-current)
   if [[ "$current_branch" != "main" ]]; then
     error "Must be on 'main' branch to publish (currently on: $current_branch)"
-  fi
-
-  # Check working tree is clean
-  if [[ -n $(git status --porcelain) ]]; then
-    error "Working tree is not clean. Commit or stash changes first."
   fi
 
   # Fetch latest tags
@@ -89,11 +84,6 @@ main() {
   if [[ -z "$new_version" ]]; then
     echo ""
     read -p "Enter new version (e.g., v1.0.0): " new_version
-  fi
-
-  # Add 'v' prefix if missing
-  if [[ ! $new_version =~ ^v ]]; then
-    new_version="v${new_version}"
   fi
 
   # Validate format
