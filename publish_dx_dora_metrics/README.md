@@ -4,9 +4,9 @@ Publishes deployment metrics to DX (ecobee.getdx.net) for DORA tracking and visi
 
 ## Prerequisites
 
-**Required Secret:** `DX_API_TOKEN` must be configured at the organization or repository level in GitHub Secrets.
+**Required Secret:** `DX_API_TOKEN` is configured as a GitHub organizational secret.
 
-Contact your platform team to ensure this secret is available in your repository or organization settings.
+This secret is managed centrally by the SRE team and is automatically available to all repositories in the ecobee organization.
 
 ## Usage
 
@@ -35,9 +35,9 @@ Contact your platform team to ensure this secret is available in your repository
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DX_API_TOKEN` | DX API token for authentication | Yes |
+| Variable | Description | Required | Source |
+|----------|-------------|----------|--------|
+| `DX_API_TOKEN` | DX API token for authentication | Yes | GitHub organizational secret |
 
 ## Example Workflow
 
@@ -77,6 +77,6 @@ This action follows [semantic versioning](https://semver.org/). When integrating
 ## Security Notes
 
 - The `DX_API_TOKEN` is **never** passed as an action input to prevent accidental exposure in logs
-- The token must be configured in GitHub Secrets (organization or repository level)
+- The token is configured as a GitHub organizational secret, managed centrally by the SRE team
 - The action will fail explicitly if the token is not available
 - Never commit tokens or credentials to the repository

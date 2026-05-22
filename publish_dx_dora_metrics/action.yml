@@ -1,5 +1,5 @@
 name: 'Publish DX DORA Metrics'
-description: 'Publishes deployment metrics to DX for DORA tracking. Requires DX_API_TOKEN to be set in GitHub secrets.'
+description: 'Publishes deployment metrics to DX for DORA tracking. Requires DX_API_TOKEN organizational secret.'
 inputs:
   repository:
     description: 'Repository identifier (e.g., ecobee/service-name)'
@@ -25,7 +25,7 @@ runs:
         # Validate DX_API_TOKEN is available
         if [ -z "$DX_API_TOKEN" ]; then
           echo "ERROR: DX_API_TOKEN environment variable is not set"
-          echo "Please ensure the secret is configured at the organization or repository level"
+          echo "This should be configured as an organizational secret by the SRE team"
           exit 1
         fi
 
