@@ -33,11 +33,9 @@ This secret is managed centrally by the SRE team and is automatically available 
 | `repository` | Repository identifier (e.g., `ecobee/service-name`) | Yes | - |
 | `environment` | Deployment environment | No | `production` |
 | `service` | Service identifier | Yes | - |
-| `commit-sha` | Git commit SHA | No | `${{ github.sha }}` |
-| `deployed-at` | Unix timestamp of deployment | No | Current time |
-| `commit-timestamp` | Unix timestamp of commit (for change lead time tracking) | No | - |
+| `commit-timestamp` | Commit timestamp (Unix timestamp or ISO 8601) | Yes | - |
 
-> **Note on `commit-timestamp`:** This is optional but recommended for accurate change lead time metrics in trunk-based workflows. Use `${{ github.event.head_commit.timestamp }}` or compute from git history if needed.
+> **Note:** `commit-timestamp` is required for change lead time tracking. Use `${{ github.event.head_commit.timestamp }}` (ISO 8601 format) - the action will automatically convert it to Unix timestamp.
 
 ## Environment Variables
 

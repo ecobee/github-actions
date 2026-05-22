@@ -11,16 +11,9 @@ inputs:
   service:
     description: 'Service identifier'
     required: true
-  commit-sha:
-    description: 'Git commit SHA (defaults to current commit)'
-    required: false
-    default: ${{ github.sha }}
-  deployed-at:
-    description: 'Unix timestamp of deployment (defaults to current time)'
-    required: false
   commit-timestamp:
-    description: 'Unix timestamp of commit (for change lead time tracking)'
-    required: false
+    description: 'Commit timestamp (Unix timestamp or ISO 8601 format). Needed to calculate lead time for changes in trunk-based workflows. Defaults to current time if not provided, but should be set for accurate metrics.'
+    required: true
 runs:
   using: 'composite'
   steps:
@@ -29,8 +22,7 @@ runs:
         REPOSITORY: ${{ inputs.repository }}
         ENVIRONMENT: ${{ inputs.environment }}
         SERVICE: ${{ inputs.service }}
-        COMMIT_SHA: ${{ inputs.commit-sha }}
-        DEPLOYED_AT: ${{ inputs.deployed-at }}
+        COMMIT_SHA: ${{ github.sha }}
         COMMIT_TIMESTAMP: ${{ inputs.commit-timestamp }}
       run: |
         set -euo pipefail
@@ -51,50 +43,45 @@ runs:
           exit 1
         fi
 
+        if [ -z "$COMMIT_TIMESTAMP" ]; then
+          echo "::error::commit-timestamp input is required"
+          exit 1
+        fi
+
         # Validate DX_API_TOKEN is available
         if [ -z "$DX_API_TOKEN" ]; then
           echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by the SRE team"
           exit 1
         fi
 
-        # Default to current time if not provided
-        DEPLOYED_AT_UNIX="${DEPLOYED_AT:-$(date +%s)}"
+        # Always use current time for deployment
+        DEPLOYED_AT_UNIX=$(date +%s)
+
+        # Convert commit timestamp if ISO 8601 format
+        if [[ "$COMMIT_TIMESTAMP" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T ]]; then
+          COMMIT_TIMESTAMP_UNIX=$(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$COMMIT_TIMESTAMP" "+%s" 2>/dev/null || date -d "$COMMIT_TIMESTAMP" +%s)
+        else
+          COMMIT_TIMESTAMP_UNIX="$COMMIT_TIMESTAMP"
+        fi
 
         # Construct JSON payload safely using jq
-        # For trunk-based workflows, includes commit_timestamp in metadata
-        if [ -n "$COMMIT_TIMESTAMP" ]; then
-          PAYLOAD=$(jq -n \
-            --arg repo "$REPOSITORY" \
-            --arg env "$ENVIRONMENT" \
-            --arg svc "$SERVICE" \
-            --arg sha "$COMMIT_SHA" \
-            --argjson ts "$DEPLOYED_AT_UNIX" \
-            --argjson ct "$COMMIT_TIMESTAMP" \
-            '{
-              repository: $repo,
-              environment: $env,
-              service: {identifier: $svc},
-              commit_sha: $sha,
-              deployed_at: $ts,
-              metadata: {
-                commit_timestamp: $ct
-              }
-            }')
-        else
-          PAYLOAD=$(jq -n \
-            --arg repo "$REPOSITORY" \
-            --arg env "$ENVIRONMENT" \
-            --arg svc "$SERVICE" \
-            --arg sha "$COMMIT_SHA" \
-            --argjson ts "$DEPLOYED_AT_UNIX" \
-            '{
-              repository: $repo,
-              environment: $env,
-              service: {identifier: $svc},
-              commit_sha: $sha,
-              deployed_at: $ts
-            }')
-        fi
+        PAYLOAD=$(jq -n \
+          --arg repo "$REPOSITORY" \
+          --arg env "$ENVIRONMENT" \
+          --arg svc "$SERVICE" \
+          --arg sha "$COMMIT_SHA" \
+          --argjson ts "$DEPLOYED_AT_UNIX" \
+          --argjson ct "$COMMIT_TIMESTAMP_UNIX" \
+          '{
+            repository: $repo,
+            environment: $env,
+            service: {identifier: $svc},
+            commit_sha: $sha,
+            deployed_at: $ts,
+            metadata: {
+              commit_timestamp: $ct
+            }
+          }')
 
         # Make API call (fails automatically on 4xx/5xx)
         curl --fail --silent --show-error \
