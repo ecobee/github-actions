@@ -13,6 +13,7 @@ This secret is managed centrally by the SRE team and is automatically available 
 ```yaml
 - name: Publish DORA metrics
   uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1
+  continue-on-error: true
   env:
     DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
   with:
@@ -23,6 +24,8 @@ This secret is managed centrally by the SRE team and is automatically available 
 ```
 
 > **Note:** Use `@v1` for the latest stable version, `@v1.0.0` to pin to a specific release, or `@main` for the latest (unstable) version.
+> 
+> **Important:** Use `continue-on-error: true` to prevent metrics tracking failures from blocking deployments.
 
 ## Inputs
 
@@ -60,6 +63,7 @@ jobs:
       
       - name: Publish deployment metrics
         uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1
+        continue-on-error: true
         env:
           DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
         with:
