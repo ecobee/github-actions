@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Simple release script for github-actions
-# Usage: ./scripts/release.sh [version]
+# Usage: ./scripts/set-release-tag.sh <version>
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -79,11 +79,10 @@ main() {
     info "Latest version: $latest_tag"
   fi
 
-  # Get new version
+  # Get new version (required)
   local new_version="${1:-}"
   if [[ -z "$new_version" ]]; then
-    echo ""
-    read -p "Enter new version (e.g., v1.0.0): " new_version
+    error "Version argument required. Usage: ./scripts/set-release-tag.sh v1.2.3"
   fi
 
   # Validate format

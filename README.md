@@ -32,11 +32,7 @@ For maintainers releasing new versions:
 1. **Merge changes to main**
 2. **Run the release script:**
    ```bash
-   ./scripts/release.sh v1.2.3
-   ```
-   Or run without a version to be prompted:
-   ```bash
-   ./scripts/release.sh
+   ./scripts/set-release-tag.sh v1.2.3
    ```
    The script will:
    - Validate you're on `main` with a clean working tree
