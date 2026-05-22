@@ -1,0 +1,96 @@
+name: 'Publish DX DORA Metrics (Trunk-Based)'
+description: 'Publishes deployment metrics to DX for trunk-based development workflows. Requires DX_API_TOKEN organizational secret.'
+inputs:
+  repository:
+    description: 'Repository identifier (e.g., ecobee/service-name)'
+    required: true
+  service:
+    description: 'Service identifier'
+    required: true
+  commit-sha:
+    description: 'Git commit SHA (defaults to current commit)'
+    required: false
+    default: ${{ github.sha }}
+  deployed-at:
+    description: 'Unix timestamp of deployment (defaults to current time)'
+    required: false
+  commit-timestamp:
+    description: 'Unix timestamp of commit (for change lead time tracking)'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish deployment to DX
+      env:
+        REPOSITORY: ${{ inputs.repository }}
+        SERVICE: ${{ inputs.service }}
+        COMMIT_SHA: ${{ inputs.commit-sha }}
+        DEPLOYED_AT: ${{ inputs.deployed-at }}
+        COMMIT_TIMESTAMP: ${{ inputs.commit-timestamp }}
+      run: |
+        set -euo pipefail
+
+        # Validate required inputs
+        if [ -z "$REPOSITORY" ]; then
+          echo "::error::repository input is required"
+          exit 1
+        fi
+
+        if [ -z "$SERVICE" ]; then
+          echo "::error::service input is required"
+          exit 1
+        fi
+
+        if [ -z "$COMMIT_SHA" ]; then
+          echo "::error::commit-sha input is required"
+          exit 1
+        fi
+
+        # Validate DX_API_TOKEN is available
+        if [ -z "$DX_API_TOKEN" ]; then
+          echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by the SRE team"
+          exit 1
+        fi
+
+        # Default to current time if not provided
+        DEPLOYED_AT_UNIX="${DEPLOYED_AT:-$(date +%s)}"
+
+        # Construct JSON payload safely using jq
+        # For trunk-based workflows, includes commit_timestamp in metadata
+        if [ -n "$COMMIT_TIMESTAMP" ]; then
+          PAYLOAD=$(jq -n \
+            --arg repo "$REPOSITORY" \
+            --arg svc "$SERVICE" \
+            --arg sha "$COMMIT_SHA" \
+            --argjson ts "$DEPLOYED_AT_UNIX" \
+            --argjson ct "$COMMIT_TIMESTAMP" \
+            '{
+              repository: $repo,
+              service: {identifier: $svc},
+              commit_sha: $sha,
+              deployed_at: $ts,
+              metadata: {
+                commit_timestamp: $ct
+              }
+            }')
+        else
+          PAYLOAD=$(jq -n \
+            --arg repo "$REPOSITORY" \
+            --arg svc "$SERVICE" \
+            --arg sha "$COMMIT_SHA" \
+            --argjson ts "$DEPLOYED_AT_UNIX" \
+            '{
+              repository: $repo,
+              service: {identifier: $svc},
+              commit_sha: $sha,
+              deployed_at: $ts
+            }')
+        fi
+
+        # Make API call (fails automatically on 4xx/5xx)
+        curl --fail --silent --show-error \
+          -X POST "https://ecobee.getdx.net/api/deployments.create" \
+          -H "Authorization: Bearer ${DX_API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD"
+      shell: bash
