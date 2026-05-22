@@ -18,6 +18,45 @@ See individual action directory for details on usage and examples.
 - [Push Docker GCR](../push_docker_gcr) - creates docker file from repo's Dockerfile, pushed using supplied build tag
 - [Publish DX DORA Metrics](../publish_dx_dora_metrics) - publishes deployment metrics to DX for DORA tracking
 
+## Versioning
+
+This repository follows [semantic versioning](https://semver.org/). When using these actions in workflows:
+- **Recommended:** `@v1` - automatically get non-breaking updates (patches and minor versions)
+- **Pinned:** `@v1.0.0` - pin to a specific release version
+- **Unstable:** `@main` - use latest code (not recommended for production)
+
+### Creating Releases
+
+For maintainers releasing new versions:
+
+1. **Merge changes to main**
+2. **Run the release script:**
+   ```bash
+   ./scripts/release.sh v1.2.3
+   ```
+   Or run without a version to be prompted:
+   ```bash
+   ./scripts/release.sh
+   ```
+   The script will:
+   - Validate you're on `main` with a clean working tree
+   - Show the current latest version
+   - Validate the new version is greater than the current version
+   - Create and push both the version tag (`v1.2.3`) and major tag (`v1`)
+
+**Manual alternative:**
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   git tag -f v1
+   git push -f origin v1
+   ```
+
+**Versioning Guidelines:**
+- **Major (v2.0.0):** Breaking changes to inputs, outputs, or behavior
+- **Minor (v1.1.0):** New features, backward-compatible changes
+- **Patch (v1.0.1):** Bug fixes, documentation updates
+
 <!-- ## Changelog
 
 Please see the [CHANGELOG.md](CHANGELOG.md) for details on individual releases. -->
