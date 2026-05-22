@@ -4,10 +4,10 @@ Collection of GitHub actions for ecobee. While the current examples are all comp
 
 | Action                                                                 |
 | ---------------------------------------------------------------------- |
-| [`ecobee/github-actions/go_build_artifact@v1`](../go_build_artifact) |
-| [`ecobee/github-actions/go_test_and_lint@v1`](../go_test_and_lint)   |
-| [`ecobee/github-actions/push_docker_gcr@v1`](../push_docker_gcr)     |
-| [`ecobee/github-actions/publish_dx_dora_metrics@v1`](../publish_dx_dora_metrics) |
+| [`ecobee/github-actions/go_build_artifact@v1`](./go_build_artifact) |
+| [`ecobee/github-actions/go_test_and_lint@v1`](./go_test_and_lint)   |
+| [`ecobee/github-actions/push_docker_gcr@v1`](./push_docker_gcr)     |
+| [`ecobee/github-actions/publish_dx_dora_metrics@v1`](./publish_dx_dora_metrics) |
 
 ## Usage
 
