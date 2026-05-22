@@ -21,30 +21,43 @@ runs:
   using: 'composite'
   steps:
     - name: Publish deployment to DX
+      env:
+        REPOSITORY: ${{ inputs.repository }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        SERVICE: ${{ inputs.service }}
+        COMMIT_SHA: ${{ inputs.commit-sha }}
+        DEPLOYED_AT: ${{ inputs.deployed-at }}
       run: |
+        set -euo pipefail
+
         # Validate DX_API_TOKEN is available
         if [ -z "$DX_API_TOKEN" ]; then
-          echo "ERROR: DX_API_TOKEN environment variable is not set"
-          echo "This should be configured as an organizational secret by the SRE team"
+          echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by the SRE team"
           exit 1
         fi
 
-        COMMIT_SHA="${{ inputs.commit-sha }}"
-        DEPLOYED_AT_UNIX="${{ inputs.deployed-at }}"
-
         # Default to current time if not provided
-        if [ -z "$DEPLOYED_AT_UNIX" ]; then
-          DEPLOYED_AT_UNIX=$(date +%s)
-        fi
+        DEPLOYED_AT_UNIX="${DEPLOYED_AT:-$(date +%s)}"
 
-        curl -X POST "https://ecobee.getdx.net/api/deployments.create" \
+        # Construct JSON payload safely using jq
+        PAYLOAD=$(jq -n \
+          --arg repo "$REPOSITORY" \
+          --arg env "$ENVIRONMENT" \
+          --arg svc "$SERVICE" \
+          --arg sha "$COMMIT_SHA" \
+          --argjson ts "$DEPLOYED_AT_UNIX" \
+          '{
+            repository: $repo,
+            environment: $env,
+            service: {identifier: $svc},
+            commit_sha: $sha,
+            deployed_at: $ts
+          }')
+
+        # Make API call (fails automatically on 4xx/5xx)
+        curl --fail --silent --show-error \
+          -X POST "https://ecobee.getdx.net/api/deployments.create" \
           -H "Authorization: Bearer ${DX_API_TOKEN}" \
           -H "Content-Type: application/json" \
-          -d '{
-            "repository": "${{ inputs.repository }}",
-            "environment": "${{ inputs.environment }}",
-            "service": {"identifier": "${{ inputs.service }}"},
-            "commit_sha": "'"${COMMIT_SHA}"'",
-            "deployed_at": '"${DEPLOYED_AT_UNIX}"'
-          }'
+          -d "$PAYLOAD"
       shell: bash
