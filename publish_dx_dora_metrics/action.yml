@@ -1,0 +1,50 @@
+name: 'Publish DX DORA Metrics'
+description: 'Publishes deployment metrics to DX for DORA tracking. Requires DX_API_TOKEN to be set in GitHub secrets.'
+inputs:
+  repository:
+    description: 'Repository identifier (e.g., ecobee/service-name)'
+    required: true
+  environment:
+    description: 'Deployment environment (e.g., prod, staging, test)'
+    required: true
+  service:
+    description: 'Service identifier'
+    required: true
+  commit-sha:
+    description: 'Git commit SHA (defaults to current commit)'
+    required: false
+    default: ${{ github.sha }}
+  deployed-at:
+    description: 'Unix timestamp of deployment (defaults to current time)'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish deployment to DX
+      run: |
+        # Validate DX_API_TOKEN is available
+        if [ -z "$DX_API_TOKEN" ]; then
+          echo "ERROR: DX_API_TOKEN environment variable is not set"
+          echo "Please ensure the secret is configured at the organization or repository level"
+          exit 1
+        fi
+
+        COMMIT_SHA="${{ inputs.commit-sha }}"
+        DEPLOYED_AT_UNIX="${{ inputs.deployed-at }}"
+
+        # Default to current time if not provided
+        if [ -z "$DEPLOYED_AT_UNIX" ]; then
+          DEPLOYED_AT_UNIX=$(date +%s)
+        fi
+
+        curl -X POST "https://ecobee.getdx.net/api/deployments.create" \
+          -H "Authorization: Bearer ${DX_API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repository": "${{ inputs.repository }}",
+            "environment": "${{ inputs.environment }}",
+            "service": {"identifier": "${{ inputs.service }}"},
+            "commit_sha": "'"${COMMIT_SHA}"'",
+            "deployed_at": '"${DEPLOYED_AT_UNIX}"'
+          }'
+      shell: bash

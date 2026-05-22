@@ -4,9 +4,10 @@ Collection of GitHub actions for ecobee. While the current examples are all comp
 
 | Action                                                                 |
 | ---------------------------------------------------------------------- |
-| [`ecobee/github-actions/go_build_artifact@main`](../go_build_artifact) |
-| [`ecobee/github-actions/go_test_and_lint@main`](../go_test_and_lint)   |
-| [`ecobee/github-actions/push_docker_gcr@main`](../push_docker_gcr)     |
+| [`ecobee/github-actions/go_build_artifact@v1`](../go_build_artifact) |
+| [`ecobee/github-actions/go_test_and_lint@v1`](../go_test_and_lint)   |
+| [`ecobee/github-actions/push_docker_gcr@v1`](../push_docker_gcr)     |
+| [`ecobee/github-actions/publish_dx_dora_metrics@v1`](../publish_dx_dora_metrics) |
 
 ## Usage
 
@@ -15,6 +16,7 @@ See individual action directory for details on usage and examples.
 - [Go Build artifact](../go_build_artifact) - builds golang binary and outputs build tag
 - [Go Test and Lint](../go_test_and_lint) - runs golang tests, and lints with golangci-lint
 - [Push Docker GCR](../push_docker_gcr) - creates docker file from repo's Dockerfile, pushed using supplied build tag
+- [Publish DX DORA Metrics](../publish_dx_dora_metrics) - publishes deployment metrics to DX for DORA tracking
 
 <!-- ## Changelog
 
