@@ -2,14 +2,14 @@ name: 'Publish DX DORA Metrics (Trunk-Based)'
 description: 'Publishes deployment metrics to DX for trunk-based development workflows. Requires DX_API_TOKEN organizational secret.'
 inputs:
   repository:
-    description: 'Repository identifier (e.g., ecobee/service-name)'
+    description: 'Repository identifier (e.g., ecobee/op-ts-server-core, ecobee/service-home)'
     required: true
   environment:
     description: 'Deployment environment (defaults to production)'
     required: false
     default: 'production'
   service:
-    description: 'Service identifier'
+    description: 'Service identifier (e.g. communicator, service-home)'
     required: true
 runs:
   using: 'composite'
