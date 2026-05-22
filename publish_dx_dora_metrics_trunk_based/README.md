@@ -1,6 +1,6 @@
-# Publish DX DORA Metrics
+# Publish DX DORA Metrics (Trunk-Based)
 
-Publishes deployment metrics to DX (ecobee.getdx.net) for DORA tracking and visibility.
+Publishes deployment metrics to DX (ecobee.getdx.net) for trunk-based development workflows where code is committed directly to the main branch and deployed.
 
 ## Prerequisites
 
@@ -12,13 +12,16 @@ This secret is managed centrally by the SRE team and is automatically available 
 
 ```yaml
 - name: Publish DORA metrics
-  uses: ecobee/github-actions/publish_dx_dora_metrics@v1
+  uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1
   env:
     DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
   with:
     repository: 'ecobee/my-service'
-    environment: 'production'
     service: 'my-service'
+    # Optional: defaults to 'production' - only needed for testing
+    environment: 'staging'
+    # Optional: for change lead time tracking
+    commit-timestamp: ${{ github.event.head_commit.timestamp }}
 ```
 
 > **Note:** Use `@v1` for the latest stable version, `@v1.0.0` to pin to a specific release, or `@main` for the latest (unstable) version.
@@ -28,10 +31,13 @@ This secret is managed centrally by the SRE team and is automatically available 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `repository` | Repository identifier (e.g., `ecobee/service-name`) | Yes | - |
-| `environment` | Deployment environment (`prod`, `staging`, `test`, etc.) | Yes | - |
+| `environment` | Deployment environment | No | `production` |
 | `service` | Service identifier | Yes | - |
 | `commit-sha` | Git commit SHA | No | `${{ github.sha }}` |
 | `deployed-at` | Unix timestamp of deployment | No | Current time |
+| `commit-timestamp` | Unix timestamp of commit (for change lead time tracking) | No | - |
+
+> **Note on `commit-timestamp`:** This is optional but recommended for accurate change lead time metrics in trunk-based workflows. Use `${{ github.event.head_commit.timestamp }}` or compute from git history if needed.
 
 ## Environment Variables
 
@@ -58,13 +64,13 @@ jobs:
       # ... your deployment steps ...
       
       - name: Publish deployment metrics
-        uses: ecobee/github-actions/publish_dx_dora_metrics@v1
+        uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1
         env:
           DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
         with:
           repository: 'ecobee/my-service'
-          environment: 'production'
           service: 'my-service'
+          commit-timestamp: ${{ github.event.head_commit.timestamp }}
 ```
 
 ## Versioning

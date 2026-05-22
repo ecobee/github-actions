@@ -4,6 +4,10 @@ inputs:
   repository:
     description: 'Repository identifier (e.g., ecobee/service-name)'
     required: true
+  environment:
+    description: 'Deployment environment (defaults to production)'
+    required: false
+    default: 'production'
   service:
     description: 'Service identifier'
     required: true
@@ -23,6 +27,7 @@ runs:
     - name: Publish deployment to DX
       env:
         REPOSITORY: ${{ inputs.repository }}
+        ENVIRONMENT: ${{ inputs.environment }}
         SERVICE: ${{ inputs.service }}
         COMMIT_SHA: ${{ inputs.commit-sha }}
         DEPLOYED_AT: ${{ inputs.deployed-at }}
@@ -60,12 +65,14 @@ runs:
         if [ -n "$COMMIT_TIMESTAMP" ]; then
           PAYLOAD=$(jq -n \
             --arg repo "$REPOSITORY" \
+            --arg env "$ENVIRONMENT" \
             --arg svc "$SERVICE" \
             --arg sha "$COMMIT_SHA" \
             --argjson ts "$DEPLOYED_AT_UNIX" \
             --argjson ct "$COMMIT_TIMESTAMP" \
             '{
               repository: $repo,
+              environment: $env,
               service: {identifier: $svc},
               commit_sha: $sha,
               deployed_at: $ts,
@@ -76,11 +83,13 @@ runs:
         else
           PAYLOAD=$(jq -n \
             --arg repo "$REPOSITORY" \
+            --arg env "$ENVIRONMENT" \
             --arg svc "$SERVICE" \
             --arg sha "$COMMIT_SHA" \
             --argjson ts "$DEPLOYED_AT_UNIX" \
             '{
               repository: $repo,
+              environment: $env,
               service: {identifier: $svc},
               commit_sha: $sha,
               deployed_at: $ts
