@@ -20,8 +20,6 @@ This secret is managed centrally by the SRE team and is automatically available 
     service: 'my-service'
     # Optional: defaults to 'production' - only needed for testing
     environment: 'staging'
-    # Optional: for change lead time tracking
-    commit-timestamp: ${{ github.event.head_commit.timestamp }}
 ```
 
 > **Note:** Use `@v1` for the latest stable version, `@v1.0.0` to pin to a specific release, or `@main` for the latest (unstable) version.
@@ -33,9 +31,8 @@ This secret is managed centrally by the SRE team and is automatically available 
 | `repository` | Repository identifier (e.g., `ecobee/service-name`) | Yes | - |
 | `environment` | Deployment environment | No | `production` |
 | `service` | Service identifier | Yes | - |
-| `commit-timestamp` | Commit timestamp (Unix timestamp or ISO 8601) | Yes | - |
 
-> **Note:** `commit-timestamp` is required for change lead time tracking. Use `${{ github.event.head_commit.timestamp }}` (ISO 8601 format) - the action will automatically convert it to Unix timestamp.
+> **Note:** The action automatically extracts the commit timestamp from git for change lead time tracking. 
 
 ## Environment Variables
 
@@ -68,7 +65,6 @@ jobs:
         with:
           repository: 'ecobee/my-service'
           service: 'my-service'
-          commit-timestamp: ${{ github.event.head_commit.timestamp }}
 ```
 
 ## Versioning

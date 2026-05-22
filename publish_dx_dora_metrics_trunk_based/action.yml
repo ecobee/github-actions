@@ -11,9 +11,6 @@ inputs:
   service:
     description: 'Service identifier'
     required: true
-  commit-timestamp:
-    description: 'Commit timestamp (Unix timestamp or ISO 8601 format). Needed to calculate lead time for changes in trunk-based workflows. Defaults to current time if not provided, but should be set for accurate metrics.'
-    required: true
 runs:
   using: 'composite'
   steps:
@@ -23,7 +20,6 @@ runs:
         ENVIRONMENT: ${{ inputs.environment }}
         SERVICE: ${{ inputs.service }}
         COMMIT_SHA: ${{ github.sha }}
-        COMMIT_TIMESTAMP: ${{ inputs.commit-timestamp }}
       run: |
         set -euo pipefail
 
@@ -43,16 +39,14 @@ runs:
           exit 1
         fi
 
-        if [ -z "$COMMIT_TIMESTAMP" ]; then
-          echo "::error::commit-timestamp input is required"
-          exit 1
-        fi
-
         # Validate DX_API_TOKEN is available
         if [ -z "$DX_API_TOKEN" ]; then
           echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by the SRE team"
           exit 1
         fi
+
+        # Get commit timestamp from git
+        COMMIT_TIMESTAMP_UNIX=$(git show -s --format=%ct "$COMMIT_SHA")
 
         # Always use current time for deployment
         DEPLOYED_AT_UNIX=$(date +%s)
