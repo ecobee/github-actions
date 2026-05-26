@@ -1,5 +1,5 @@
 name: 'Publish DX DORA Metrics (Trunk-Based)'
-description: 'Publishes deployment metrics to DX for trunk-based development workflows. Requires DX_API_TOKEN organizational secret which is managed globally by the SRE team. Teams should not have to worry about it.'
+description: 'Publishes deployment metrics to DX for trunk-based development workflows. Requires DX_API_TOKEN organizational secret which is managed globally by GitHub Admins. Teams should not have to worry about it.'
 inputs:
   repository:
     description: 'Repository identifier (e.g., ecobee/op-ts-server-core, ecobee/service-home)'
