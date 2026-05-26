@@ -62,7 +62,7 @@ runs:
           '{
             repository: $repo,
             environment: $env,
-            opslevel_service: {identifier: $svc},
+            service: {identifier: $svc},
             commit_sha: $sha,
             deployed_at: $ts,
             metadata: {
