@@ -1,0 +1,79 @@
+name: 'Publish DX DORA Metrics (Trunk-Based)'
+description: 'Publishes deployment metrics to DX for trunk-based development workflows. Requires DX_API_TOKEN organizational secret which is managed globally by GitHub Admins. Teams should not have to worry about it.'
+inputs:
+  repository:
+    description: 'Repository identifier (e.g., ecobee/op-ts-server-core, ecobee/service-home)'
+    required: true
+  environment:
+    description: 'Deployment environment (defaults to production)'
+    required: false
+    default: 'production'
+  opslevel_service:
+    description: 'Service identifier (e.g. communicator, service-home). This should match the identifier used in OpsLevel to get proper service mapping in DX.'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish deployment to DX
+      env:
+        REPOSITORY: ${{ inputs.repository }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        SERVICE: ${{ inputs.opslevel_service }}
+        COMMIT_SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+
+        # Validate required inputs
+        if [ -z "$REPOSITORY" ]; then
+          echo "::error::repository input is required"
+          exit 1
+        fi
+
+        if [ -z "$SERVICE" ]; then
+          echo "::error::service input is required"
+          exit 1
+        fi
+
+        if [ -z "$COMMIT_SHA" ]; then
+          echo "::error::commit-sha input is required"
+          exit 1
+        fi
+
+        # Validate DX_API_TOKEN is available
+        if [ -z "$DX_API_TOKEN" ]; then
+          echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by GitHub Admins"
+          exit 1
+        fi
+
+        # Get commit timestamp from git
+        COMMIT_TIMESTAMP_UNIX=$(git show -s --format=%ct "$COMMIT_SHA")
+
+        # Always use current time for deployment
+        DEPLOYED_AT_UNIX=$(date +%s)
+
+        # Construct JSON payload safely using jq
+        PAYLOAD=$(jq -n \
+          --arg repo "$REPOSITORY" \
+          --arg env "$ENVIRONMENT" \
+          --arg svc "$SERVICE" \
+          --arg sha "$COMMIT_SHA" \
+          --argjson ts "$DEPLOYED_AT_UNIX" \
+          --argjson ct "$COMMIT_TIMESTAMP_UNIX" \
+          '{
+            repository: $repo,
+            environment: $env,
+            service: {identifier: $svc},
+            commit_sha: $sha,
+            deployed_at: $ts,
+            metadata: {
+              commit_timestamp: $ct
+            }
+          }')
+
+        # Make API call (fails automatically on 4xx/5xx)
+        curl --fail-with-body --silent --show-error \
+          -X POST "https://ecobee.getdx.net/api/deployments.create" \
+          -H "Authorization: Bearer ${DX_API_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD"
+      shell: bash
