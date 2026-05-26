@@ -9,7 +9,7 @@ inputs:
     required: false
     default: 'production'
   opslevel_service:
-    description: 'Service identifier (e.g. communicator, service-home)'
+    description: 'Service identifier (e.g. communicator, service-home). This should match the identifier used in OpsLevel to get proper service mapping in DX.'
     required: true
 runs:
   using: 'composite'
@@ -18,7 +18,7 @@ runs:
       env:
         REPOSITORY: ${{ inputs.repository }}
         ENVIRONMENT: ${{ inputs.environment }}
-        SERVICE: ${{ inputs.service }}
+        SERVICE: ${{ inputs.opslevel_service }}
         COMMIT_SHA: ${{ github.sha }}
       run: |
         set -euo pipefail
@@ -41,7 +41,7 @@ runs:
 
         # Validate DX_API_TOKEN is available
         if [ -z "$DX_API_TOKEN" ]; then
-          echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by the SRE team"
+          echo "::error::DX_API_TOKEN environment variable is not set. This should be configured as an organizational secret by GitHub Admins"
           exit 1
         fi
 

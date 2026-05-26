@@ -6,7 +6,7 @@ Publishes deployment metrics to DX (ecobee.getdx.net) for trunk-based developmen
 
 **Required Secret:** `DX_API_TOKEN` is configured as a GitHub organizational secret.
 
-This secret is managed centrally by the SRE team and is automatically available to all repositories in the ecobee organization.
+This secret is managed centrally by GitHub Admins and is automatically available to all repositories in the ecobee organization.
 
 ## Usage
 
@@ -18,7 +18,7 @@ This secret is managed centrally by the SRE team and is automatically available 
     DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
   with:
     repository: 'ecobee/my-service'
-    service: 'my-service'
+    opslevel_service: 'my-service'
     # Optional: defaults to 'production' - only needed for testing
     environment: 'staging'
 ```
@@ -33,7 +33,7 @@ This secret is managed centrally by the SRE team and is automatically available 
 |-------|-------------|----------|---------|
 | `repository` | Repository identifier (e.g., `ecobee/service-name`) | Yes | - |
 | `environment` | Deployment environment | No | `production` |
-| `service` | Service identifier | Yes | - |
+| `opslevel_service` | Service identifier from OpsLevel | Yes | - |
 
 > **Note:** The action automatically extracts the commit timestamp from git for change lead time tracking. 
 
@@ -68,7 +68,7 @@ jobs:
           DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
         with:
           repository: 'ecobee/my-service'
-          service: 'my-service'
+          opslevel_service: 'my-service'
 ```
 
 ## Versioning
@@ -81,6 +81,6 @@ This action follows [semantic versioning](https://semver.org/). When integrating
 ## Security Notes
 
 - The `DX_API_TOKEN` is **never** passed as an action input to prevent accidental exposure in logs
-- The token is configured as a GitHub organizational secret, managed centrally by the SRE team
+- The token is configured as a GitHub organizational secret, managed centrally by GitHub Admins
 - The action will fail explicitly if the token is not available
 - Never commit tokens or credentials to the repository
