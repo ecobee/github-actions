@@ -71,7 +71,7 @@ runs:
           }')
 
         # Make API call (fails automatically on 4xx/5xx)
-        curl --fail --silent --show-error \
+        curl --fail-with-body --silent --show-error \
           -X POST "https://ecobee.getdx.net/api/deployments.create" \
           -H "Authorization: Bearer ${DX_API_TOKEN}" \
           -H "Content-Type: application/json" \
