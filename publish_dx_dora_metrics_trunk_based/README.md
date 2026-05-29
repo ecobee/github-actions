@@ -12,7 +12,7 @@ This secret is managed centrally by GitHub Admins and is automatically available
 
 ```yaml
 - name: Publish DORA metrics
-  uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1
+  uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1.0.0
   continue-on-error: true
   env:
     DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
