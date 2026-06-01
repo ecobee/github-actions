@@ -11,16 +11,18 @@ This secret is managed centrally by GitHub Admins and is automatically available
 ## Usage
 
 ```yaml
-- name: Publish DORA metrics
-  uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1.0.0
-  continue-on-error: true
-  env:
-    DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
-  with:
-    repository: 'ecobee/my-service'
-    opslevel_service: 'my-service'
-    # Optional: defaults to 'production' - only needed for testing
-    environment: 'staging'
+publish-dora-metrics:
+  needs: [prod-deploy] # <--- add your production deployment job name here
+  
+  - name: Publish DORA metrics
+    uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1.0.0
+    if: success()
+  
+    env:
+      DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
+    with:
+      repository: 'ecobee/my-service'
+      opslevel_service: 'my-service'
 ```
 
 > **Note:** Use `@v1` for the latest stable version, `@v1.0.0` to pin to a specific release, or `@main` for the latest (unstable) version.
@@ -55,7 +57,6 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
@@ -63,7 +64,6 @@ jobs:
       
       - name: Publish deployment metrics
         uses: ecobee/github-actions/publish_dx_dora_metrics_trunk_based@v1
-        continue-on-error: true
         env:
           DX_API_TOKEN: ${{ secrets.DX_API_TOKEN }}
         with:
