@@ -14,5 +14,5 @@ permissions:
   pull-requests: write
 
 jobs:
-  pin:
+  suggest-pins:
     uses: ./.github/workflows/pin-suggestions.yml

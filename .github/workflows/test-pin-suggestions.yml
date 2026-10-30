@@ -15,18 +15,17 @@ jobs:
   policy-specs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    env:
-      # Must match the pinact version bundled by the pinact-action release that
-      # pin-suggestions.yml pins. Checksum from pinact's release and pinact-action's aqua lockfile.
-      PINACT_VERSION: 4.0.0
-      PINACT_SHA256: cc220902615325b10bd3bc52ed3de27488f79adaec52adcd12bd2194c2d2c592
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
 
+      # The version and checksum are read from the reusable workflow, their single source.
       - name: Install pinact
         run: |
+          workflow=.github/workflows/pin-suggestions.yml
+          PINACT_VERSION="$(sed -n 's/^[[:space:]]*PINACT_VERSION:[[:space:]]*//p' "$workflow" | head -n 1)"
+          PINACT_SHA256="$(sed -n 's/^[[:space:]]*PINACT_SHA256:[[:space:]]*//p' "$workflow" | head -n 1)"
           archive="$RUNNER_TEMP/pinact.tar.gz"
           curl --fail --silent --show-error --location --output "$archive" \
             "https://github.com/suzuki-shunsuke/pinact/releases/download/v${PINACT_VERSION}/pinact_linux_amd64.tar.gz"

@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# Living spec for the pinning policy shipped in the pin-suggestions reusable workflow.
+# Living spec for the pin-suggestions reusable workflow.
 #
-# Each scenario writes one `uses:` line into a throwaway workflow, applies the policy
-# with pinact exactly as the reusable workflow does, and checks the resulting line.
+# Each scenario writes one `uses:` line into a throwaway workflow and runs pinact the
+# way the reusable workflow does: once to apply the pinning policy (the suggestion a
+# developer sees), and once in check mode to produce the warning annotations.
 # Expected SHAs come from `git ls-remote` on exact release tags, which don't move.
 #
-# Requires: pinact 4.0.0 on PATH (or PINACT=/path/to/pinact) and GITHUB_TOKEN.
+# Requires pinact on PATH (or PINACT=/path/to/pinact) at the version the workflow pins,
+# and GITHUB_TOKEN.
 
 set -euo pipefail
-
-# Must match the pinact version bundled by the pinact-action release the workflow pins.
-readonly PINACT_VERSION="4.0.0"
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 readonly WORKFLOW="$repo_root/.github/workflows/pin-suggestions.yml"
@@ -18,25 +17,25 @@ pinact="${PINACT:-pinact}"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 failures=0
+pinact_flags=()
 
 fail_setup() {
   echo "setup error: $1" >&2
   exit 2
 }
 
-check_prerequisites() {
-  command -v "$pinact" >/dev/null 2>&1 || fail_setup "pinact not found; install pinact $PINACT_VERSION or set PINACT"
-  "$pinact" -v | grep -q "version $PINACT_VERSION\$" || fail_setup "expected pinact $PINACT_VERSION, got: $("$pinact" -v)"
-  [[ -n "${GITHUB_TOKEN:-}" ]] || fail_setup "GITHUB_TOKEN is required to resolve tags"
-  [[ -f "$WORKFLOW" ]] || fail_setup "reusable workflow not found at $WORKFLOW"
+# Read a job env value (e.g. PINACT_VERSION) from the reusable workflow.
+workflow_env() {
+  sed -n "s/^[[:space:]]*$1:[[:space:]]*\"\{0,1\}\([^\"[:space:]]*\)\"\{0,1\}.*/\1/p" "$WORKFLOW" | head -n 1
 }
 
-# The policy lives inline in the reusable workflow between marker comments, so the
-# workflow stays the single source of truth. Strip the block's shared indentation.
-extract_policy() {
-  awk '
-    /# BEGIN pinning-policy/ { inside = 1; next }
-    /# END pinning-policy/   { inside = 0 }
+# Copy the block between `# BEGIN <name>` and `# END <name>` out of the workflow,
+# stripping its shared indentation, so the workflow stays the single source of truth.
+extract_block() {
+  local name="$1" out="$2"
+  awk -v begin="# BEGIN $name" -v end="# END $name" '
+    index($0, begin) { inside = 1; next }
+    index($0, end)   { inside = 0 }
     inside { lines[n++] = $0 }
     END {
       min = -1
@@ -47,48 +46,73 @@ extract_policy() {
       }
       for (i = 0; i < n; i++) print substr(lines[i], min + 1)
     }
-  ' "$WORKFLOW" > "$work_dir/policy.yaml"
-  [[ -s "$work_dir/policy.yaml" ]] || fail_setup "no pinning-policy block found in $WORKFLOW"
+  ' "$WORKFLOW" > "$out"
+  [[ -s "$out" ]] || fail_setup "no '$name' block found in $WORKFLOW"
 }
 
-# Version comment verification is a pinact-action input, not part of the config file,
-# so read it from the workflow too.
-pinact_flags=()
-read_verify_setting() {
-  if grep -Eq '^[[:space:]]+verify: "true"' "$WORKFLOW"; then
-    pinact_flags+=(--verify)
-  fi
+setup() {
+  [[ -f "$WORKFLOW" ]] || fail_setup "reusable workflow not found at $WORKFLOW"
+  [[ -n "${GITHUB_TOKEN:-}" ]] || fail_setup "GITHUB_TOKEN is required to resolve tags"
+
+  local version
+  version="$(workflow_env PINACT_VERSION)"
+  [[ -n "$version" ]] || fail_setup "PINACT_VERSION not set in $WORKFLOW"
+  command -v "$pinact" >/dev/null 2>&1 || fail_setup "pinact not found; install pinact $version or set PINACT"
+  "$pinact" -v | grep -q "version $version\$" || fail_setup "expected pinact $version, got: $("$pinact" -v)"
+
+  [[ "$(workflow_env PINACT_VERIFY)" == "true" ]] && pinact_flags+=(--verify)
+
+  extract_block pinning-policy "$work_dir/policy.yaml"
+  extract_block pinact-annotations "$work_dir/annotate.awk"
 }
 
-# Given a `uses:` value, apply the policy and print the resulting `uses:` value.
-# Mirrors the reusable workflow: --config <policy>, plus --verify when it is enabled.
-apply_policy() {
-  local file="$work_dir/workflow.yml"
-  printf 'jobs:\n  t:\n    steps:\n      - uses: %s\n' "$1" > "$file"
-  if ! "$pinact" --config "$work_dir/policy.yaml" run ${pinact_flags[@]+"${pinact_flags[@]}"} "$file" > "$work_dir/pinact.log" 2>&1; then
+write_workflow() {
+  printf 'jobs:\n  t:\n    steps:\n      - uses: %s\n' "$1" > "$work_dir/workflow.yml"
+}
+
+run_pinact() {
+  "$pinact" --config "$work_dir/policy.yaml" run ${pinact_flags[@]+"${pinact_flags[@]}"} "$@" workflow.yml
+}
+
+# Given a `uses:` value, print the `uses:` value the developer is offered.
+suggested_pin() {
+  write_workflow "$1"
+  if ! (cd "$work_dir" && run_pinact > pinact.log 2>&1); then
     echo "pinact failed:" >&2
     cat "$work_dir/pinact.log" >&2
     return 1
   fi
-  sed -n 's/^      - uses: //p' "$file"
+  sed -n 's/^      - uses: //p' "$work_dir/workflow.yml"
 }
 
-scenario() {
-  local description="$1" given="$2" expected="$3" actual
-  if actual="$(apply_policy "$given")" && [[ "$actual" == "$expected" ]]; then
+# Given a `uses:` value, print the warning annotations the check step emits.
+annotations() {
+  write_workflow "$1"
+  (cd "$work_dir" && { run_pinact --fix=false 2>&1 || true; } | awk -f annotate.awk)
+}
+
+report() {
+  local description="$1" given="$2" expected="$3" actual="$4"
+  if [[ "$actual" == "$expected" ]]; then
     echo "ok   - $description"
   else
     echo "FAIL - $description"
     echo "       given:    $given"
     echo "       expected: $expected"
-    echo "       actual:   ${actual:-<pinact error>}"
+    echo "       actual:   ${actual:-<nothing>}"
     failures=$((failures + 1))
   fi
 }
 
-check_prerequisites
-extract_policy
-read_verify_setting
+scenario() {
+  report "$1" "$2" "$3" "$(suggested_pin "$2" || true)"
+}
+
+annotation_scenario() {
+  report "$1" "$2" "$3" "$(annotations "$2")"
+}
+
+setup
 
 scenario "Given a third-party mutable reference, when the policy is applied, then it is pinned to the tag's commit with its release as the version comment" \
   "amannn/action-semantic-pull-request@v6.1.1" \
@@ -102,10 +126,26 @@ scenario "Given an internal ecobee action, when the policy is applied, then it i
   "ecobee/some-internal-repo/setup@v1" \
   "ecobee/some-internal-repo/setup@v1"
 
+scenario "Given an internal action whose owner is written in another case, when the policy is applied, then it is still left unchanged" \
+  "Ecobee/some-internal-repo/setup@v1" \
+  "Ecobee/some-internal-repo/setup@v1"
+
 # 08c6903 is v5.0.0; v5.0.1 is a different commit.
 scenario "Given a pinned reference whose version comment names the wrong release, when the policy is applied, then the comment is corrected" \
   "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.1" \
   "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0"
+
+annotation_scenario "Given a pinned reference whose version comment names the wrong release, when the workflow checks it, then it warns on that line so the SHA gets a second look" \
+  "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.1" \
+  "::warning file=workflow.yml,line=4,title=Version comment mismatch::The version comment names a different release than the pinned SHA. Check the SHA itself before accepting a suggestion."
+
+annotation_scenario "Given a reference that can't be resolved, when the workflow checks it, then it warns on that line with pinact's reason" \
+  "actions/this-action-does-not-exist@v1" \
+  "::warning file=workflow.yml,line=4,title=Could not check pin::get a reference: GET https://api.github.com/repos/actions/this-action-does-not-exist/commits/v1: 404 Not Found []"
+
+annotation_scenario "Given a correctly pinned reference, when the workflow checks it, then there are no warnings" \
+  "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0" \
+  ""
 
 scenario "Given a pinned reference with no version comment, when the policy is applied, then the release is added as the version comment" \
   "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8" \

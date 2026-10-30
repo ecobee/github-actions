@@ -23,7 +23,7 @@ See individual action directory for details on usage and examples.
 
 SonarQube and Wiz flag workflow lines like `uses: actions/setup-go@v6` because a tag can be moved to different code. This reusable workflow comments on each such line your pull request adds with the pinned form, for example `uses: actions/setup-go@<sha> # v6.1.0`, which runs exactly what `@v6` runs today. Select "Add suggestion to batch" on each comment, then "Commit suggestions". It all happens in the browser, so nothing needs installing.
 
-It's advisory: it never fails your pull request and never commits for you. Internal `ecobee/` actions are left alone. Fork pull requests are skipped.
+It's advisory: it never fails your pull request and never commits for you. Internal `ecobee/` actions are left alone. Fork pull requests are skipped with a notice. If a pinned line's version comment names a different release than its SHA, you get a warning on that line; check the SHA before accepting the suggestion, since the suggestion only fixes the comment.
 
 Add this file to your repository as `.github/workflows/pin-suggestions.yml`:
 
@@ -42,7 +42,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  pin:
+  suggest-pins:
     uses: ecobee/github-actions/.github/workflows/pin-suggestions.yml@v1
 ```
 
@@ -65,7 +65,7 @@ updates:
         patterns: ["*"]
 ```
 
-Maintainers: the pinning policy lives inline in [`pin-suggestions.yml`](.github/workflows/pin-suggestions.yml) and is specified by [`tests/pin_suggestions/test.sh`](tests/pin_suggestions/test.sh). Run the specs locally with pinact 4.0.0 on your `PATH` and `GITHUB_TOKEN=$(gh auth token) tests/pin_suggestions/test.sh`. When bumping pinact-action, update the pinact version and checksum in the spec and the test workflow to match the version it bundles.
+Maintainers: the pinning policy lives inline in [`pin-suggestions.yml`](.github/workflows/pin-suggestions.yml) and is specified by [`tests/pin_suggestions/test.sh`](tests/pin_suggestions/test.sh). Run the specs locally with the pinact version from that workflow's `PINACT_VERSION` on your `PATH` and `GITHUB_TOKEN=$(gh auth token) tests/pin_suggestions/test.sh`. When bumping pinact-action, update `PINACT_VERSION` and `PINACT_SHA256` in the workflow to match the pinact it bundles; the specs and their CI read both from there.
 
 ## Versioning
 
