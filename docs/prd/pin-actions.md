@@ -24,22 +24,19 @@ Teams opt in by adding one short workflow that calls a reusable workflow from th
 ```mermaid
 flowchart TD
     PR["Developer opens or updates a PR<br/>that changes workflow or action files"] --> Caller["Caller workflow in the team's repo<br/>grants contents: read, pull-requests: write"]
-    Caller --> Gate{"gate job:<br/>pull_request event<br/>from this repo?"}
-    Gate -- "no: fork or other event" --> Skip["Notice explaining the skip<br/>job ends green"]
-    Gate -- yes --> Checkout["suggest-pins job<br/>checkout, credentials not persisted"]
+    Caller --> Same{"pull_request event<br/>from a branch in this repo?"}
+    Same -- "no: fork or other event" --> Skip["Job shows as Skipped<br/>README explains why"]
+    Same -- yes --> Checkout["Checkout<br/>credentials not persisted"]
     Checkout --> Policy["Write pinning policy<br/>internal ecobee actions exempt"]
-    Policy --> Check["Check pins<br/>pinned pinact, checksum verified, check mode"]
-    Check -- "version comment mismatch<br/>or unresolvable reference" --> Warn["Warning annotation<br/>on the file and line"]
-    Check --> Suggest["Suggest pins<br/>pinact-action in review mode, push disabled"]
-    Warn --> Suggest
-    Suggest --> Reviewdog["pinact output piped to reviewdog"]
-    Reviewdog --> Comments["Suggested change comment<br/>on each added mutable reference"]
+    Policy --> Suggest["Suggest pins<br/>pinact-action in review mode, push disabled"]
+    Suggest --> Reviewdog["pinact findings piped to reviewdog"]
+    Reviewdog --> Comments["On each added line: a suggested pin,<br/>or an error comment with the reason"]
     Suggest -- "step fails" --> Unavailable["Warning and job summary:<br/>suggestions unavailable"]
     Comments --> Accept["Developer selects Commit suggestions"]
     Accept --> Rescan["New commit runs CI again<br/>SonarQube and Wiz re-scan the pinned lines"]
 ```
 
-Nothing in this flow can fail the pull request: every failure path ends in a warning, and the job is `continue-on-error`. The only commit comes from the developer accepting suggestions.
+The check is never required, so nothing in this flow can block a merge, and a failure in the suggestion step ends in a warning. The only commit comes from the developer accepting suggestions.
 
 ## User Stories
 
@@ -62,13 +59,13 @@ Nothing in this flow can fail the pull request: every failure path ends in a war
 - Pinning policy: every action reference is pinned except internal actions. GitHub's `actions/*` and `github/*` are not exempt. Version comments are verified. Consumers can't override it.
 - A pin resolves the commit the tag points to at run time, and the comment names the most specific semver tag at that commit (`@v5` becomes `@<sha> # v5.1.0`). This was checked against `git ls-remote`, and a second run produced no change.
 - Permissions are the default `GITHUB_TOKEN` with `contents: read` and `pull-requests: write`. No GitHub App, PAT or `workflows` permission, because the author makes the commit.
-- Failures (API errors, unresolvable references) are logged with file, line and reason, and never fail the pull request. Fork pull requests exit successfully with a log message.
+- Lines pinact can't pin (unresolvable references, a SHA that is no release) get an error comment with the reason on that line. A failure of the suggestion step itself is reported as a warning and job summary. Fork pull requests and non-`pull_request` events are skipped, and the README explains why.
 - The README documents the consumer workflow and a Dependabot snippet: weekly, one group for all actions, seven day cooldown, and no ignored minor or patch updates, since ignoring them freezes SHA pins.
 
 ## Testing Decisions
 
 - One seam: apply the shipped policy with pinact to fixture workflow files and compare against expected output, locally and in this repository's CI. Fixtures use exact tags such as `@v5.0.0` so expected SHAs don't drift.
-- Scenarios: a third-party reference is pinned with a matching comment; an `actions/*` reference is pinned; an internal `ecobee/` reference is left alone without error; an already pinned file is unchanged on re-run; a wrong version comment is reported; a missing version comment is added.
+- Scenarios: a third-party reference is pinned with a matching comment; an `actions/*` reference is pinned; an internal `ecobee/` reference is left alone without error; an already pinned file is unchanged on re-run; a release SHA with the wrong version comment gets a corrected comment; a SHA that is no release is reported as an error; a missing version comment is added.
 - A manual run on a sandbox pull request confirms suggestions land on the right lines, commit as a batch, and that a forced API failure leaves the pull request green.
 - There is no prior art; this adds the repository's first test workflow.
 
