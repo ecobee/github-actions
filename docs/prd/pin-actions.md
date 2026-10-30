@@ -19,6 +19,28 @@ SonarQube fails pull requests with "Use full commit SHA hash for this dependency
 
 Teams opt in by adding one short workflow that calls a reusable workflow from this repository. When a pull request changes workflow or action files, it posts a pin suggestion on each mutable reference the pull request adds, and the developer accepts them in the browser with "Commit suggestions." It is advisory: it never fails a pull request and never commits. SonarQube and Wiz remain the gates.
 
+### How it runs
+
+```mermaid
+flowchart TD
+    PR["Developer opens or updates a PR<br/>that changes workflow or action files"] --> Caller["Caller workflow in the team's repo<br/>grants contents: read, pull-requests: write"]
+    Caller --> Gate{"gate job:<br/>pull_request event<br/>from this repo?"}
+    Gate -- "no: fork or other event" --> Skip["Notice explaining the skip<br/>job ends green"]
+    Gate -- yes --> Checkout["suggest-pins job<br/>checkout, credentials not persisted"]
+    Checkout --> Policy["Write pinning policy<br/>internal ecobee actions exempt"]
+    Policy --> Check["Check pins<br/>pinned pinact, checksum verified, check mode"]
+    Check -- "version comment mismatch<br/>or unresolvable reference" --> Warn["Warning annotation<br/>on the file and line"]
+    Check --> Suggest["Suggest pins<br/>pinact-action in review mode, push disabled"]
+    Warn --> Suggest
+    Suggest --> Reviewdog["pinact output piped to reviewdog"]
+    Reviewdog --> Comments["Suggested change comment<br/>on each added mutable reference"]
+    Suggest -- "step fails" --> Unavailable["Warning and job summary:<br/>suggestions unavailable"]
+    Comments --> Accept["Developer selects Commit suggestions"]
+    Accept --> Rescan["New commit runs CI again<br/>SonarQube and Wiz re-scan the pinned lines"]
+```
+
+Nothing in this flow can fail the pull request: every failure path ends in a warning, and the job is `continue-on-error`. The only commit comes from the developer accepting suggestions.
+
 ## User Stories
 
 1. As a developer, I want a pin suggestion on each line Sonar flags, which I can accept in one batch commit, so that I clear the quality gate without looking up commit SHAs.
