@@ -1,0 +1,18 @@
+# Runs pin suggestions on this repository's own pull requests. Consumers use the
+# same shape but call ecobee/github-actions/.github/workflows/pin-suggestions.yml@v1.
+name: Pin suggestions (self)
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - "**/action.yml"
+      - "**/action.yaml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pin:
+    uses: ./.github/workflows/pin-suggestions.yml
