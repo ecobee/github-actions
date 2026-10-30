@@ -17,6 +17,55 @@ See individual action directory for details on usage and examples.
 - [Go Test and Lint](../go_test_and_lint) - runs golang tests, and lints with golangci-lint
 - [Push Docker GCR](../push_docker_gcr) - creates docker file from repo's Dockerfile, pushed using supplied build tag
 - [Publish DX DORA Metrics](../publish_dx_dora_metrics) - publishes deployment metrics to DX for DORA tracking
+- [Pin suggestions](#pin-suggestions) - suggests SHA pins for GitHub Actions on pull requests
+
+## Pin suggestions
+
+SonarQube and Wiz flag workflow lines like `uses: actions/setup-go@v6` because a tag can be moved to different code. This reusable workflow comments on each such line your pull request adds with the pinned form, for example `uses: actions/setup-go@<sha> # v6.1.0`, which runs exactly what `@v6` runs today. Select "Add suggestion to batch" on each comment, then "Commit suggestions". It all happens in the browser, so nothing needs installing.
+
+It's advisory: it never fails your pull request and never commits for you. Internal `ecobee/` actions are left alone. Fork pull requests are skipped.
+
+Add this file to your repository as `.github/workflows/pin-suggestions.yml`:
+
+```yaml
+name: Pin suggestions
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - "**/action.yml"
+      - "**/action.yaml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pin:
+    uses: ecobee/github-actions/.github/workflows/pin-suggestions.yml@v1
+```
+
+Don't make it a required check. Leaving it optional is what keeps it from blocking anyone.
+
+To keep pins current, let Dependabot bump them. It updates the SHA and version comment together. Group updates into one weekly pull request, and wait seven days after a release so a hijacked release has time to be caught. Don't ignore minor or patch updates, because pinned references would then never move.
+
+```yaml
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+```
+
+Maintainers: the pinning policy lives inline in [`pin-suggestions.yml`](.github/workflows/pin-suggestions.yml) and is specified by [`tests/pin_suggestions/test.sh`](tests/pin_suggestions/test.sh). Run the specs locally with pinact 4.0.0 on your `PATH` and `GITHUB_TOKEN=$(gh auth token) tests/pin_suggestions/test.sh`. When bumping pinact-action, update the pinact version and checksum in the spec and the test workflow to match the version it bundles.
 
 ## Versioning
 
