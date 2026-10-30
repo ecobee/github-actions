@@ -66,8 +66,11 @@ setup() {
 review_of() {
   printf 'jobs:\n  t:\n    steps:\n      - uses: %s\n' "$1" > "$work_dir/workflow.yml"
   # pinact exits non-zero whenever it has findings, so judge it by its SARIF output.
-  (cd "$work_dir" && "$pinact" --config policy.yaml run --fix --format sarif \
-    ${pinact_flags[@]+"${pinact_flags[@]}"} workflow.yml 2> pinact.log || true) > "$work_dir/review.sarif"
+  (
+    cd "$work_dir" || exit 1
+    "$pinact" --config policy.yaml run --fix --format sarif \
+      ${pinact_flags[@]+"${pinact_flags[@]}"} workflow.yml 2> pinact.log || true
+  ) > "$work_dir/review.sarif"
   if ! jq -e '.runs' "$work_dir/review.sarif" >/dev/null 2>&1; then
     echo "pinact produced no SARIF:" >&2
     cat "$work_dir/pinact.log" >&2
