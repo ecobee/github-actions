@@ -1,6 +1,6 @@
 # Posts a pin suggestion on each mutable action reference a pull request adds.
-# Advisory only: it never fails the pull request and never commits. The author
-# accepts suggestions with "Commit suggestions" in the GitHub UI.
+# Advisory only: it never commits, and callers must not make it a required check.
+# The author accepts suggestions with "Commit suggestions" in the GitHub UI.
 #
 # Callers must grant `contents: read` and `pull-requests: write`. See README.
 name: Pin suggestions
@@ -11,44 +11,15 @@ on:
 permissions: {}
 
 jobs:
-  gate:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    outputs:
-      run: ${{ steps.gate.outputs.run }}
-    steps:
-      - name: Check event
-        id: gate
-        env:
-          EVENT: ${{ github.event_name }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
-          REPO: ${{ github.repository }}
-        run: |
-          if [[ "$EVENT" != "pull_request" ]]; then
-            echo "::warning title=Pin suggestions skipped::Pin suggestions only run on pull_request events, not $EVENT. See the README for the caller workflow."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          elif [[ "$HEAD_REPO" != "$REPO" ]]; then
-            echo "::notice title=Pin suggestions skipped::Pull requests from forks get a read-only token, so suggestions can't be posted."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
   suggest-pins:
-    needs: gate
-    if: needs.gate.outputs.run == 'true'
+    # Fork pull requests get a read-only token and can't be reviewed, so skip them.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    # Advisory: a failure anywhere in this job must never fail the pull request.
-    continue-on-error: true
     permissions:
       contents: read
       pull-requests: write
     env:
-      # Must match the pinact bundled by the pinact-action release pinned below.
-      # Checksum from pinact's release and pinact-action's aqua lockfile.
-      PINACT_VERSION: 4.0.0
-      PINACT_SHA256: cc220902615325b10bd3bc52ed3de27488f79adaec52adcd12bd2194c2d2c592
       PINACT_VERIFY: "true"
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -68,61 +39,9 @@ jobs:
           # END pinning-policy
           POLICY
 
-      # Runs before pinact-action, which rewrites files in the workspace. Installed to a
-      # private directory: pinact on PATH would make pinact-action skip its aqua setup,
-      # which it also needs for reviewdog.
-      - name: Check pins
-        # A failure here must not stop the suggestions step from running.
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          archive="$RUNNER_TEMP/pinact.tar.gz"
-          curl --fail --silent --show-error --location --output "$archive" \
-            "https://github.com/suzuki-shunsuke/pinact/releases/download/v${PINACT_VERSION}/pinact_linux_amd64.tar.gz"
-          echo "${PINACT_SHA256}  ${archive}" | sha256sum --check --strict
-          mkdir -p "$RUNNER_TEMP/pinact-check"
-          tar -xzf "$archive" -C "$RUNNER_TEMP/pinact-check" pinact
-
-          cat > "$RUNNER_TEMP/annotate.awk" <<'AWK'
-          # BEGIN pinact-annotations
-          # pinact check mode prints "ERROR failed to handle a line: <reason>" then "<file>:<line>".
-          /^ERROR / {
-            reason = $0
-            sub(/^ERROR (failed to handle a line: )?/, "", reason)
-            next
-          }
-          reason != "" && /^[^[:space:]].*:[0-9]+$/ {
-            line = $0; sub(/.*:/, "", line)
-            file = substr($0, 1, length($0) - length(line) - 1)
-            if (reason ~ /commit_hash_of_version_annotation/) {
-              printf "::warning file=%s,line=%s,title=Version comment mismatch::The version comment names a different release than the pinned SHA. Check the SHA itself before accepting a suggestion.\n", file, line
-            } else {
-              printf "::warning file=%s,line=%s,title=Could not check pin::%s\n", file, line, reason
-            }
-            reason = ""
-          }
-          # END pinact-annotations
-          AWK
-
-          verify=()
-          [[ "$PINACT_VERIFY" == "true" ]] && verify=(--verify)
-          { "$RUNNER_TEMP/pinact-check/pinact" --config "$RUNNER_TEMP/pinact.yaml" run --fix=false "${verify[@]}" 2>&1 || true; } \
-            | tee "$RUNNER_TEMP/pinact-check.log" \
-            | awk -f "$RUNNER_TEMP/annotate.awk" \
-            | tee "$RUNNER_TEMP/annotations.txt"
-          echo "::group::pinact output"
-          cat "$RUNNER_TEMP/pinact-check.log"
-          echo "::endgroup::"
-          if [[ -s "$RUNNER_TEMP/annotations.txt" ]]; then
-            {
-              echo "### Pin suggestions: some references need a closer look"
-              echo "See the warnings on the files in this pull request, or the Check pins step log."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
       # pinact-action installs pinact and reviewdog through aqua with checksums required.
-      # skip_push keeps it off the commit path; review posts suggestions via reviewdog.
+      # skip_push keeps it off the commit path; review posts each pinact finding as a
+      # comment: a suggested change, or an error such as an unresolvable reference.
       - name: Suggest pins
         id: suggest
         continue-on-error: true
@@ -139,8 +58,4 @@ jobs:
         if: steps.suggest.outcome == 'failure'
         run: |
           echo "::warning title=Pin suggestions unavailable::Pin suggestions could not be posted. See the 'Suggest pins' step log for the reason. This does not block the pull request."
-          {
-            echo "### Pin suggestions unavailable"
-            echo "Pin suggestions could not be posted for this run. See the Suggest pins step log for the reason."
-            echo "This check is advisory and does not block the pull request."
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Pin suggestions could not be posted for this run. See the Suggest pins step log for the reason." >> "$GITHUB_STEP_SUMMARY"

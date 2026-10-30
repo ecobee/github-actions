@@ -20,12 +20,13 @@ jobs:
         with:
           persist-credentials: false
 
-      # The version and checksum are read from the reusable workflow, their single source.
+      # The version comes from the spec, its single source. Update the checksum with it,
+      # from pinact's release checksums and pinact-action's aqua lockfile.
       - name: Install pinact
+        env:
+          PINACT_SHA256: cc220902615325b10bd3bc52ed3de27488f79adaec52adcd12bd2194c2d2c592
         run: |
-          workflow=.github/workflows/pin-suggestions.yml
-          PINACT_VERSION="$(sed -n 's/^[[:space:]]*PINACT_VERSION:[[:space:]]*//p' "$workflow" | head -n 1)"
-          PINACT_SHA256="$(sed -n 's/^[[:space:]]*PINACT_SHA256:[[:space:]]*//p' "$workflow" | head -n 1)"
+          PINACT_VERSION="$(sed -n 's/^readonly PINACT_VERSION="\(.*\)"$/\1/p' tests/pin_suggestions/test.sh)"
           archive="$RUNNER_TEMP/pinact.tar.gz"
           curl --fail --silent --show-error --location --output "$archive" \
             "https://github.com/suzuki-shunsuke/pinact/releases/download/v${PINACT_VERSION}/pinact_linux_amd64.tar.gz"
