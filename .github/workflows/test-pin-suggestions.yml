@@ -3,7 +3,7 @@ name: Test pin suggestions
 on:
   pull_request:
     paths:
-      - .github/workflows/pin-suggestions.yml
+      - pin_suggestions/**
       - .github/workflows/test-pin-suggestions.yml
       - tests/pin_suggestions/**
   workflow_dispatch: {}

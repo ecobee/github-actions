@@ -1,5 +1,5 @@
-# Runs pin suggestions on this repository's own pull requests. Consumers use the
-# same shape but call ecobee/github-actions/.github/workflows/pin-suggestions.yml@v1.
+# Runs pin suggestions on this repository's own pull requests. Consumers use the same
+# shape with `uses: ecobee/github-actions/pin_suggestions@v1` and no checkout step.
 name: Pin suggestions (self)
 
 on:
@@ -8,6 +8,7 @@ on:
       - .github/workflows/**
       - "**/action.yml"
       - "**/action.yaml"
+      - pin_suggestions/**
 
 permissions:
   contents: read
@@ -15,4 +16,11 @@ permissions:
 
 jobs:
   suggest-pins:
-    uses: ./.github/workflows/pin-suggestions.yml
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # A local action resolves from the workspace, so it must be checked out first.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: ./pin_suggestions

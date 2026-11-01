@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Living spec for the pin-suggestions reusable workflow.
+# Living spec for the pin_suggestions action.
 #
 # Each scenario writes one `uses:` line into a throwaway workflow, runs pinact the way
 # pinact-action does in review mode, and checks what the pull request author would see
@@ -10,12 +10,13 @@
 
 set -euo pipefail
 
-# Must match the pinact bundled by the pinact-action release that pin-suggestions.yml pins.
+# Must match the pinact bundled by the pinact-action release that pin_suggestions/action.yml pins.
 # The test workflow installs this version.
 readonly PINACT_VERSION="4.0.0"
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-readonly WORKFLOW="$repo_root/.github/workflows/pin-suggestions.yml"
+readonly ACTION="$repo_root/pin_suggestions/action.yml"
+readonly POLICY="$repo_root/pin_suggestions/pinact.yaml"
 pinact="${PINACT:-pinact}"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
@@ -27,38 +28,19 @@ fail_setup() {
   exit 2
 }
 
-# The policy lives inline in the reusable workflow between marker comments, so the
-# workflow stays the single source of truth. Strip the block's shared indentation.
-extract_policy() {
-  awk '
-    /# BEGIN pinning-policy/ { inside = 1; next }
-    /# END pinning-policy/   { inside = 0 }
-    inside { lines[n++] = $0 }
-    END {
-      min = -1
-      for (i = 0; i < n; i++) {
-        if (lines[i] ~ /^[[:space:]]*$/) continue
-        match(lines[i], /^ */)
-        if (min < 0 || RLENGTH < min) min = RLENGTH
-      }
-      for (i = 0; i < n; i++) print substr(lines[i], min + 1)
-    }
-  ' "$WORKFLOW" > "$work_dir/policy.yaml"
-  [[ -s "$work_dir/policy.yaml" ]] || fail_setup "no pinning-policy block found in $WORKFLOW"
-}
-
 setup() {
-  [[ -f "$WORKFLOW" ]] || fail_setup "reusable workflow not found at $WORKFLOW"
+  [[ -f "$ACTION" ]] || fail_setup "action not found at $ACTION"
+  [[ -f "$POLICY" ]] || fail_setup "pinning policy not found at $POLICY"
   [[ -n "${GITHUB_TOKEN:-}" ]] || fail_setup "GITHUB_TOKEN is required to resolve tags"
   command -v jq >/dev/null 2>&1 || fail_setup "jq not found"
   command -v "$pinact" >/dev/null 2>&1 || fail_setup "pinact not found; install pinact $PINACT_VERSION or set PINACT"
   "$pinact" -v | grep -q "version $PINACT_VERSION\$" || fail_setup "expected pinact $PINACT_VERSION, got: $("$pinact" -v)"
 
-  # Version comment verification is a pinact-action input, so read it from the workflow.
-  if grep -Eq '^[[:space:]]+PINACT_VERIFY:[[:space:]]+"true"' "$WORKFLOW"; then
+  # Version comment verification is a pinact-action input, so read it from the action.
+  # Its only `verify:` input is the one passed to pinact-action.
+  if grep -Eq '^[[:space:]]+verify:[[:space:]]+"true"$' "$ACTION"; then
     pinact_flags+=(--verify)
   fi
-  extract_policy
 }
 
 # Given a `uses:` value, print what the review shows on that line:
@@ -68,7 +50,7 @@ review_of() {
   # pinact exits non-zero whenever it has findings, so judge it by its SARIF output.
   (
     cd "$work_dir" || exit 1
-    "$pinact" --config policy.yaml run --fix --format sarif \
+    "$pinact" --config "$POLICY" run --fix --format sarif \
       ${pinact_flags[@]+"${pinact_flags[@]}"} workflow.yml 2> pinact.log || true
   ) > "$work_dir/review.sarif"
   if ! jq -e '.runs' "$work_dir/review.sarif" >/dev/null 2>&1; then

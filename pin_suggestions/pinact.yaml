@@ -1,0 +1,7 @@
+# Pinning policy for pin_suggestions. Every action reference must be pinned to a
+# full commit SHA except internal actions, which ship fixes through their version tags.
+version: 3
+rules:
+  - ignore: true
+    conditions:
+      - expr: lower(ActionRepoOwner) == "ecobee"
