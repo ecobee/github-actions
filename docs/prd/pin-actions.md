@@ -17,15 +17,15 @@ SonarQube fails pull requests with "Use full commit SHA hash for this dependency
 
 ## Solution
 
-Teams opt in by adding one short workflow that calls a reusable workflow from this repository. When a pull request changes workflow or action files, it posts a pin suggestion on each mutable reference the pull request adds, and the developer accepts them in the browser with "Commit suggestions." It is advisory: it never fails a pull request and never commits. SonarQube and Wiz remain the gates.
+Teams opt in by adding one short workflow that runs the `pin_suggestions` composite action from this repository. When a pull request changes workflow or action files, it posts a pin suggestion on each mutable reference the pull request adds, and the developer accepts them in the browser with "Commit suggestions." It is advisory: it never fails a pull request and never commits. SonarQube and Wiz remain the gates.
 
 ### How it runs
 
 ```mermaid
 flowchart TD
-    PR["Developer opens or updates a PR<br/>that changes workflow or action files"] --> Caller["Caller workflow in the team's repo<br/>grants contents: read, pull-requests: write"]
+    PR["Developer opens or updates a PR<br/>that changes workflow or action files"] --> Caller["Team workflow runs pin_suggestions<br/>job grants contents: read, pull-requests: write"]
     Caller --> Same{"pull_request event<br/>from a branch in this repo?"}
-    Same -- "no: fork or other event" --> Skip["Job shows as Skipped<br/>README explains why"]
+    Same -- "no: fork or other event" --> Skip["Notice explaining why<br/>check passes"]
     Same -- yes --> Checkout["Checkout<br/>credentials not persisted"]
     Checkout --> Policy["Write pinning policy<br/>internal ecobee actions exempt"]
     Policy --> Suggest["Suggest pins<br/>pinact-action in review mode, push disabled"]
@@ -54,12 +54,12 @@ The check is never required, so nothing in this flow can block a merge, and a fa
 
 ## Implementation Decisions
 
-- Delivery is a reusable workflow in this repository, released under the existing semver practice and `v1` tag. A reusable workflow owns triggers, permissions, checkout and failure handling, which a composite action can't, and keeps the consumer file to about eight lines.
+- Delivery is a composite action, `ecobee/github-actions/pin_suggestions`, released under the existing semver practice and `v1` tag like the other actions here. Callers grant permissions and triggers either way, so a reusable workflow bought nothing extra. The action checks out the repository itself, so the consumer job is a single step, and the pinning policy ships as a plain `pinact.yaml` beside it.
 - It wraps `suzuki-shunsuke/pinact-action`, pinned by SHA, in review mode with pushing disabled. The wrapper exists to hard-code these safe settings (the upstream default is push mode), carry the pinning policy, and give us one place to swap tools. pinact was chosen for signed releases, version comment verification and active maintenance; its main risk is a single primary maintainer.
 - Pinning policy: every action reference is pinned except internal actions. GitHub's `actions/*` and `github/*` are not exempt. Version comments are verified. Consumers can't override it.
 - A pin resolves the commit the tag points to at run time, and the comment names the most specific semver tag at that commit (`@v5` becomes `@<sha> # v5.1.0`). This was checked against `git ls-remote`, and a second run produced no change.
 - Permissions are the default `GITHUB_TOKEN` with `contents: read` and `pull-requests: write`. No GitHub App, PAT or `workflows` permission, because the author makes the commit.
-- Lines pinact can't pin (unresolvable references, a SHA that is no release) get an error comment with the reason on that line. A failure of the suggestion step itself is reported as a warning and job summary. Fork pull requests and non-`pull_request` events are skipped, and the README explains why.
+- Lines pinact can't pin (unresolvable references, a SHA that is no release) get an error comment with the reason on that line. A failure of the suggestion step itself is reported as a warning and job summary. Fork pull requests and non-`pull_request` events end early with a notice explaining why, and the check passes.
 - The README documents the consumer workflow and a Dependabot snippet: weekly, one group for all actions, seven day cooldown, and no ignored minor or patch updates, since ignoring them freezes SHA pins.
 
 ## Testing Decisions
@@ -76,7 +76,7 @@ An org-wide rollout campaign, a blocking check of our own, and pinning anything 
 ## Delivery Plan
 
 1. Spike: use pinact-action directly in one real repository to answer how it installs and verifies pinact, whether review mode posts suggestions with pushing disabled, and whether `GITHUB_TOKEN` is enough under ecobee's org settings. If any answer is no, revise this PRD before building.
-2. Build the reusable workflow and fixture tests.
+2. Build the composite action and fixture tests.
 3. Document adoption and the Dependabot snippet in the README.
 
 Possible follow-ups, each needing its own decision: a check mode if the SonarQube rule is disabled, and pinning internal actions once Dependabot's handling of prefixed tags (such as `<name>-v1.0.2`) is verified.
