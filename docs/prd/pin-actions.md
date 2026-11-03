@@ -76,6 +76,7 @@ An org-wide rollout campaign, a blocking check of our own, and pinning anything 
 ## Delivery Plan
 
 1. Spike: use pinact-action directly in one real repository to answer how it installs and verifies pinact, whether review mode posts suggestions with pushing disabled, and whether `GITHUB_TOKEN` is enough under ecobee's org settings. If any answer is no, revise this PRD before building.
+   Result: all three answered yes. pinact-action installs pinact and reviewdog through aqua with checksums required; with pushing disabled it never runs git; and a sandbox pull request in a private ecobee repository received a committable suggestion and an error comment using only the default `GITHUB_TOKEN`.
 2. Build the composite action and fixture tests.
 3. Document adoption and the Dependabot snippet in the README.
 
