@@ -1,0 +1,53 @@
+name: 'Pin suggestions'
+description: 'Suggests SHA pins for mutable action references a pull request adds. Advisory only; never commits.'
+# The calling job must grant `contents: read` and `pull-requests: write`. See README.
+runs:
+  using: "composite"
+  steps:
+    # Fork pull requests get a read-only token that can't post reviews, and other
+    # events have no pull request diff to comment on.
+    - name: Check event
+      id: gate
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        REPO: ${{ github.repository }}
+      run: |
+        if [[ "$EVENT" != "pull_request" ]]; then
+          echo "::notice title=Pin suggestions skipped::Pin suggestions only run on pull_request events, not $EVENT."
+          echo "run=false" >> "$GITHUB_OUTPUT"
+        elif [[ "$HEAD_REPO" != "$REPO" ]]; then
+          echo "::notice title=Pin suggestions skipped::Pull requests from forks get a read-only token, so suggestions can't be posted."
+          echo "run=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "run=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - if: steps.gate.outputs.run == 'true'
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      with:
+        persist-credentials: false
+
+    # pinact-action installs pinact and reviewdog through aqua with checksums required.
+    # skip_push keeps it off the commit path; review posts each pinact finding as a
+    # comment: a suggested change, or an error such as an unresolvable reference.
+    - name: Suggest pins
+      id: suggest
+      if: steps.gate.outputs.run == 'true'
+      continue-on-error: true
+      uses: suzuki-shunsuke/pinact-action@896d595f299e71d65b9d28349d6956abe144390a # v3.0.0
+      with:
+        config: ${{ github.action_path }}/pinact.yaml
+        skip_push: "true"
+        review: "true"
+        verify: "true"
+        reviewdog_filter_mode: added
+        reviewdog_fail_level: none
+
+    - name: Report when suggestions could not be posted
+      if: steps.suggest.outcome == 'failure'
+      shell: bash
+      run: |
+        echo "::warning title=Pin suggestions unavailable::Pin suggestions could not be posted. See the 'Suggest pins' step log for the reason. This does not block the pull request."
+        echo "Pin suggestions could not be posted for this run. See the Suggest pins step log for the reason." >> "$GITHUB_STEP_SUMMARY"
